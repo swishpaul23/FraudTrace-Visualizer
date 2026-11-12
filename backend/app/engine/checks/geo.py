@@ -5,10 +5,11 @@ IP-resolved country. If all three disagree, that's a strong signal that
 either the buyer or the payment method has been compromised.
 """
 
+from app.models.rules import RuleConfig
 from app.models.transaction import TransactionInput
 
 
-def check_geo(tx: TransactionInput) -> tuple[bool, str, dict]:
+def check_geo(tx: TransactionInput, rules: RuleConfig) -> tuple[bool, str, dict]:
     corroborated = (
         tx.ip_country == tx.billing_country
         or tx.shipping_country == tx.billing_country

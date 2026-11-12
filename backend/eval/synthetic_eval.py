@@ -48,6 +48,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from app.models.transaction import TransactionInput  # noqa: E402
 from app.models.trace import Decision  # noqa: E402
 from app.engine.runner import run_decision  # noqa: E402
+from app.models.rules import RuleConfig  # noqa: E402
 
 # The engine logs at WARNING for every FAILED node (see
 # app/logging_config.py). Across a 1000-row synthetic run that's a lot of
@@ -76,7 +77,7 @@ def _random_amount(rng: random.Random) -> Decimal:
     """
     Skewed toward small transactions (most real transactions are small)
     but with a tail reaching well past the amount_risk threshold
-    (app/engine/checks/amount_risk.py: > 5000) in both directions, so the
+    (RuleConfig.max_amount default in app/models/rules.py: > 5000) in both directions, so the
     eval can measure that check's actual precision/recall contribution
     instead of just confirming it fires. rng.random() ** 4 concentrates
     most mass under ~2000 while still putting ~30% of rows above 5000 —
@@ -209,7 +210,7 @@ def run_eval(n: int, seed: int) -> list[EvalRow]:
     for i in range(n):
         txn = generate_transaction(rng, i)
         gt_label, gt_score = assess_risk(txn)
-        trace = run_decision(txn)
+        trace = run_decision(txn, RuleConfig())
         engine_label = "BLOCK" if trace.decision == Decision.DECLINE else "ALLOW"
         rows.append(
             EvalRow(

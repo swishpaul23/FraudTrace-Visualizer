@@ -8,7 +8,10 @@ instead of every test file re-declaring all eighteen required fields.
 
 from datetime import datetime, timezone
 
+from app.models.rules import RuleConfig
 from app.models.transaction import TransactionInput
+
+DEFAULT_RULES = RuleConfig()
 
 
 def valid_transaction_kwargs() -> dict:

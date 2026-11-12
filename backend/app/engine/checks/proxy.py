@@ -5,10 +5,11 @@ carried on the transaction, not something this engine derives from the
 raw IP address itself.
 """
 
+from app.models.rules import RuleConfig
 from app.models.transaction import TransactionInput
 
 
-def check_proxy(tx: TransactionInput) -> tuple[bool, str, dict]:
+def check_proxy(tx: TransactionInput, rules: RuleConfig) -> tuple[bool, str, dict]:
     metadata = {
         "is_known_proxy": tx.is_known_proxy,
         "is_known_datacenter": tx.is_known_datacenter,

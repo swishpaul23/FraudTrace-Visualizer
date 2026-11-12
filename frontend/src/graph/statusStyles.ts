@@ -1,28 +1,52 @@
-import type { NodeStatus } from "../types/trace.gen";
+import type { Decision, NodeStatus } from "../types/trace.gen";
 
 /**
- * Single source of truth for how a node/edge status maps to visual
- * styling. Nothing else in the graph layer should branch on status —
- * route new styling through these two functions instead of adding
- * conditionals elsewhere.
+ * Single source of truth for how a node status or overall decision
+ * maps to visual styling and wording. Every status is shown as text
+ * plus an icon, never color alone.
  */
 
-const STATUS_CLASSES: Record<NodeStatus, string> = {
-  PASSED: "border-emerald-500 bg-emerald-50 text-emerald-900",
-  FAILED: "border-red-500 bg-red-50 text-red-900",
-  SKIPPED: "border-gray-300 bg-gray-50 text-gray-500",
-};
-
-const EDGE_COLORS: Record<NodeStatus, string> = {
-  PASSED: "#10b981",
-  FAILED: "#ef4444",
-  SKIPPED: "#d1d5db",
-};
-
-export function statusClass(status: NodeStatus): string {
-  return STATUS_CLASSES[status];
+interface StatusStyle {
+  label: string;
+  icon: string;
+  badge: string;
+  card: string;
+  edge: string;
 }
 
-export function edgeColor(status: NodeStatus): string {
-  return EDGE_COLORS[status];
+const NODE_STATUS: Record<NodeStatus, StatusStyle> = {
+  PASSED: {
+    label: "Passed",
+    icon: "✓",
+    badge: "bg-emerald-50 text-emerald-800 ring-emerald-600/25",
+    card: "border-slate-300 bg-white",
+    edge: "#059669",
+  },
+  FAILED: {
+    label: "Failed",
+    icon: "✕",
+    badge: "bg-red-50 text-red-800 ring-red-600/25",
+    card: "border-red-400 bg-white",
+    edge: "#dc2626",
+  },
+  SKIPPED: {
+    label: "Not run",
+    icon: "–",
+    badge: "bg-slate-100 text-slate-700 ring-slate-500/25",
+    card: "border-dashed border-slate-300 bg-slate-50",
+    edge: "#94a3b8",
+  },
+};
+
+const DECISION: Record<Decision, Pick<StatusStyle, "label" | "icon" | "badge">> = {
+  APPROVE: { label: "Approved", icon: "✓", badge: NODE_STATUS.PASSED.badge },
+  DECLINE: { label: "Declined", icon: "✕", badge: NODE_STATUS.FAILED.badge },
+};
+
+export function nodeStatusStyle(status: NodeStatus): StatusStyle {
+  return NODE_STATUS[status];
+}
+
+export function decisionStyle(decision: Decision) {
+  return DECISION[decision];
 }

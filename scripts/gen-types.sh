@@ -97,6 +97,10 @@ echo "Generating TypeScript types with openapi-typescript..."
   echo 'export type NodeResult = components["schemas"]["NodeResult"];'
   echo 'export type NodeStatus = components["schemas"]["NodeStatus"];'
   echo 'export type Decision = components["schemas"]["Decision"];'
+  echo 'export type RuleConfig = components["schemas"]["RuleConfig"];'
+  echo 'export type DecisionRequest = components["schemas"]["DecisionRequest"];'
+  echo 'export type BatchDecisionRequest = components["schemas"]["BatchDecisionRequest"];'
+  echo 'export type BatchDecisionResponse = components["schemas"]["BatchDecisionResponse"];'
 } > "$OUT_FILE"
 
 echo "Wrote $OUT_FILE"

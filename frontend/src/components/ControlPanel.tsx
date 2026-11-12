@@ -57,10 +57,13 @@ export interface ControlPanelProps {
   onChange: (input: TransactionInput) => void;
 }
 
+const FIELD_LABEL = "text-sm font-medium text-slate-800";
+const CHECKBOX_ROW = "flex items-start gap-2.5 text-sm text-slate-800";
+
 /**
- * Owns the form state for its five exposed controls and lifts a full
- * TransactionInput to the parent on every change. Makes no API calls
- * itself — that's the parent's job via useDecision.
+ * "What if" builder: owns the form state for five exposed signals and
+ * lifts a full TransactionInput to the parent on every change. Makes no
+ * API calls itself — that's the parent's job via useDecision.
  */
 export function ControlPanel({ onChange }: ControlPanelProps) {
   const [state, setState] = useState<ControlPanelState>(DEFAULT_CONTROL_STATE);
@@ -72,62 +75,91 @@ export function ControlPanel({ onChange }: ControlPanelProps) {
   }
 
   return (
-    <div className="flex w-80 flex-col gap-4 border-r border-gray-200 bg-gray-50 p-4 shadow-sm">
-      <h2 className="text-base font-semibold uppercase tracking-wide text-gray-500">
-        Transaction controls
-      </h2>
+    <form className="flex flex-col gap-5 p-4" onSubmit={(e) => e.preventDefault()}>
+      <div>
+        <h2 className="text-base font-semibold text-slate-900">Test a scenario</h2>
+        <p className="mt-1 text-sm text-slate-600">
+          Change one signal at a time to see which check catches it. Every other field stays at a clean baseline.
+        </p>
+      </div>
 
-      <label className="flex flex-col gap-1 text-base">
-        Amount (USD)
+      <div className="flex flex-col gap-1">
+        <label htmlFor="scenario-amount" className={FIELD_LABEL}>
+          Amount (USD)
+        </label>
         <input
+          id="scenario-amount"
           type="number"
+          inputMode="decimal"
           min="0.01"
           step="0.01"
           value={state.amountDollars}
           onChange={(e) => update({ amountDollars: e.target.value })}
-          className="rounded border border-gray-300 px-2 py-1"
+          className="rounded-md border border-slate-300 px-2.5 py-1.5 text-sm"
         />
-      </label>
+      </div>
 
-      <label className="flex items-center gap-2 text-base">
+      <div className="flex flex-col gap-1">
+        <div className="flex items-baseline justify-between">
+          <label htmlFor="scenario-velocity" className={FIELD_LABEL}>
+            Transactions in the last hour
+          </label>
+          <output htmlFor="scenario-velocity" className="font-mono text-sm tabular-nums text-slate-900">
+            {state.transactionsFromAccount1h}
+          </output>
+        </div>
         <input
-          type="checkbox"
-          checked={state.isKnownProxy}
-          onChange={(e) => update({ isKnownProxy: e.target.checked })}
-        />
-        Known VPN / proxy IP
-      </label>
-
-      <label className="flex flex-col gap-1 text-base">
-        Transactions in last hour: {state.transactionsFromAccount1h}
-        <input
+          id="scenario-velocity"
           type="range"
           min={0}
           max={10}
           value={state.transactionsFromAccount1h}
           onChange={(e) => update({ transactionsFromAccount1h: Number(e.target.value) })}
+          className="accent-blue-700"
         />
-      </label>
+      </div>
 
-      <label className="flex items-center gap-2 text-base">
+      <div className="flex flex-col gap-1">
+        <div className="flex items-baseline justify-between">
+          <label htmlFor="scenario-device" className={FIELD_LABEL}>
+            Accounts on this device (24h)
+          </label>
+          <output htmlFor="scenario-device" className="font-mono text-sm tabular-nums text-slate-900">
+            {state.distinctAccountsOnDevice24h}
+          </output>
+        </div>
         <input
-          type="checkbox"
-          checked={state.geoMismatch}
-          onChange={(e) => update({ geoMismatch: e.target.checked })}
-        />
-        Billing / shipping / IP country mismatch
-      </label>
-
-      <label className="flex flex-col gap-1 text-base">
-        Accounts sharing this device (24h): {state.distinctAccountsOnDevice24h}
-        <input
+          id="scenario-device"
           type="range"
           min={0}
           max={10}
           value={state.distinctAccountsOnDevice24h}
           onChange={(e) => update({ distinctAccountsOnDevice24h: Number(e.target.value) })}
+          className="accent-blue-700"
         />
-      </label>
-    </div>
+      </div>
+
+      <fieldset className="flex flex-col gap-3">
+        <legend className={`${FIELD_LABEL} mb-2`}>Risk signals</legend>
+        <label className={CHECKBOX_ROW}>
+          <input
+            type="checkbox"
+            checked={state.isKnownProxy}
+            onChange={(e) => update({ isKnownProxy: e.target.checked })}
+            className="mt-0.5 size-4 accent-blue-700"
+          />
+          Sent from a known VPN or proxy IP
+        </label>
+        <label className={CHECKBOX_ROW}>
+          <input
+            type="checkbox"
+            checked={state.geoMismatch}
+            onChange={(e) => update({ geoMismatch: e.target.checked })}
+            className="mt-0.5 size-4 accent-blue-700"
+          />
+          IP, billing, and shipping countries all differ
+        </label>
+      </fieldset>
+    </form>
   );
 }
