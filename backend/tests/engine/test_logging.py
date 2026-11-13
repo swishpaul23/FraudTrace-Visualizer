@@ -17,7 +17,7 @@ import pytest
 from app.engine import runner
 from app.engine.runner import run_decision
 
-from tests.conftest import make_transaction
+from tests.conftest import DEFAULT_RULES, make_transaction
 
 FORBIDDEN_KEYS = {"user_id", "amount_cents"}
 ALLOWED_KEYS = {"trace_id", "node_id", "status", "evaluated_at_ms"}
@@ -36,7 +36,7 @@ def _capture_logged_extras(action):
 
 
 def test_logging_never_includes_forbidden_keys_on_all_pass():
-    payloads = _capture_logged_extras(lambda: run_decision(make_transaction()))
+    payloads = _capture_logged_extras(lambda: run_decision(make_transaction(), DEFAULT_RULES))
 
     assert payloads, "expected at least one log call"
     for payload in payloads:
@@ -47,7 +47,7 @@ def test_logging_never_includes_forbidden_keys_on_all_pass():
 def test_logging_never_includes_forbidden_keys_on_failure_and_skip():
     tx = make_transaction(is_known_proxy=True)
 
-    payloads = _capture_logged_extras(lambda: run_decision(tx))
+    payloads = _capture_logged_extras(lambda: run_decision(tx, DEFAULT_RULES))
 
     assert payloads
     for payload in payloads:
@@ -56,14 +56,14 @@ def test_logging_never_includes_forbidden_keys_on_failure_and_skip():
 
 
 def test_logging_never_includes_forbidden_keys_when_a_check_raises(monkeypatch):
-    def exploding_check(tx):
+    def exploding_check(tx, rules):
         raise RuntimeError("boom")
 
     monkeypatch.setattr(runner, "CHECKS", (("ingress", exploding_check),))
 
     def action():
         with pytest.raises(RuntimeError):
-            run_decision(make_transaction())
+            run_decision(make_transaction(), DEFAULT_RULES)
 
     payloads = _capture_logged_extras(action)
 

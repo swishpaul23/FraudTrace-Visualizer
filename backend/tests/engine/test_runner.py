@@ -11,7 +11,7 @@ from datetime import datetime, timedelta, timezone
 from app.engine.runner import run_decision
 from app.models.trace import Decision, NodeStatus
 
-from tests.conftest import make_transaction
+from tests.conftest import DEFAULT_RULES, make_transaction
 
 _SKIPPED_REASON = "skipped after an earlier check failed"
 
@@ -19,7 +19,7 @@ _SKIPPED_REASON = "skipped after an earlier check failed"
 def test_all_checks_pass_yields_approve():
     tx = make_transaction()
 
-    trace = run_decision(tx)
+    trace = run_decision(tx, DEFAULT_RULES)
 
     assert trace.decision == Decision.APPROVE
     assert [node.status for node in trace.nodes] == [NodeStatus.PASSED] * 6
@@ -29,7 +29,7 @@ def test_fail_at_ingress_skips_every_downstream_node():
     stale = datetime.now(timezone.utc) - timedelta(minutes=30)
     tx = make_transaction(timestamp=stale)
 
-    trace = run_decision(tx)
+    trace = run_decision(tx, DEFAULT_RULES)
     nodes = {node.node_id: node for node in trace.nodes}
 
     assert trace.decision == Decision.DECLINE
@@ -47,7 +47,7 @@ def test_fail_at_ingress_skips_every_downstream_node():
 def test_fail_at_geo_leaves_ingress_passed_and_skips_downstream():
     tx = make_transaction(ip_country="RU", billing_country="US", shipping_country="CA")
 
-    trace = run_decision(tx)
+    trace = run_decision(tx, DEFAULT_RULES)
     nodes = {node.node_id: node for node in trace.nodes}
 
     assert trace.decision == Decision.DECLINE
@@ -64,7 +64,7 @@ def test_fail_at_geo_leaves_ingress_passed_and_skips_downstream():
 def test_fail_at_amount_risk_leaves_earlier_nodes_passed_and_skips_downstream():
     tx = make_transaction(amount="5000.01")
 
-    trace = run_decision(tx)
+    trace = run_decision(tx, DEFAULT_RULES)
     nodes = {node.node_id: node for node in trace.nodes}
 
     assert trace.decision == Decision.DECLINE
@@ -83,7 +83,7 @@ def test_fail_at_amount_risk_leaves_earlier_nodes_passed_and_skips_downstream():
 def test_fail_at_velocity_leaves_earlier_nodes_passed_and_skips_resolution():
     tx = make_transaction(transactions_from_account_1h=6)
 
-    trace = run_decision(tx)
+    trace = run_decision(tx, DEFAULT_RULES)
     nodes = {node.node_id: node for node in trace.nodes}
 
     assert trace.decision == Decision.DECLINE

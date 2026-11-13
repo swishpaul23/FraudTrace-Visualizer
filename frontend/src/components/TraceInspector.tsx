@@ -1,55 +1,120 @@
+import { checkInfo } from "../graph/checkCatalog";
+import { formatMetadataValue, humanizeKey, toSentence } from "../lib/format";
 import type { NodeResult } from "../types/trace.gen";
+import { StatusBadge } from "./StatusBadge";
 
-function formatMetadataLabel(key: string): string {
-  return key.replace(/_/g, " ");
+interface SignalRow {
+  key: string;
+  value: unknown;
+  limit: { kind: "max" | "min"; value: number } | null;
+  breached: boolean;
 }
 
-function formatMetadataValue(value: unknown): string {
-  if (typeof value === "number") {
-    return Number.isInteger(value) ? String(value) : value.toFixed(2);
+/**
+ * Pairs each metadata value with the limit the engine applied to it.
+ * Checks report limits as `max_<key>` / `min_<key>` alongside `<key>`
+ * (see backend/app/engine/checks/*.py); unpaired limits get own rows.
+ */
+function toSignalRows(metadata: Record<string, unknown>): SignalRow[] {
+  const pairedLimitKeys = new Set<string>();
+  const rows: SignalRow[] = [];
+
+  for (const [key, value] of Object.entries(metadata)) {
+    if (key.startsWith("max_") || key.startsWith("min_")) continue;
+    const kind = `max_${key}` in metadata ? "max" : `min_${key}` in metadata ? "min" : null;
+    if (kind === null) {
+      rows.push({ key, value, limit: null, breached: false });
+      continue;
+    }
+    const limitKey = `${kind}_${key}`;
+    pairedLimitKeys.add(limitKey);
+    const limit = Number(metadata[limitKey]);
+    const numeric = Number(value);
+    rows.push({
+      key,
+      value,
+      limit: { kind, value: limit },
+      breached: kind === "max" ? numeric > limit : numeric < limit,
+    });
   }
-  if (typeof value === "boolean") {
-    return value ? "true" : "false";
+
+  for (const [key, value] of Object.entries(metadata)) {
+    if ((key.startsWith("max_") || key.startsWith("min_")) && !pairedLimitKeys.has(key)) {
+      rows.push({ key, value, limit: null, breached: false });
+    }
   }
-  return String(value);
+  return rows;
 }
 
 export interface TraceInspectorProps {
   node: NodeResult | null;
 }
 
-/**
- * Read-only detail panel for whichever node is currently selected.
- * Holds no state of its own — it only renders what it's given.
- */
+/** Read-only detail for the selected check. Renders only what it's given. */
 export function TraceInspector({ node }: TraceInspectorProps) {
   if (!node) {
     return (
-      <div className="w-96 border-l border-gray-200 bg-gray-50 p-4 text-base text-gray-400 shadow-sm">
-        Select a node to see its detail.
+      <div className="p-5">
+        <h2 className="text-sm font-semibold text-slate-900">Check details</h2>
+        <p className="mt-2 text-sm text-slate-600">
+          Select a step in the graph to see the values it evaluated and the limits it applied.
+        </p>
       </div>
     );
   }
 
-  const metadataEntries = Object.entries(node.metadata);
+  const info = checkInfo(node.node_id);
+  const rows = toSignalRows(node.metadata);
 
   return (
-    <div className="w-96 border-l border-gray-200 bg-gray-50 p-4 shadow-sm">
-      <h2 className="font-mono text-base font-semibold uppercase tracking-wide text-gray-500">
-        {node.node_id}
-      </h2>
-      <p className="mt-1 text-sm font-bold uppercase text-gray-600">{node.status}</p>
-      <p className="mt-3 text-base">{node.reason}</p>
+    <div className="p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-base font-semibold text-slate-900">{info.label}</h2>
+          <p className="font-mono text-xs text-slate-600">{node.node_id}</p>
+        </div>
+        <StatusBadge status={node.status} />
+      </div>
 
-      {metadataEntries.length > 0 && (
-        <dl className="mt-4 space-y-2 text-sm">
-          {metadataEntries.map(([key, value]) => (
-            <div key={key}>
-              <dt className="text-gray-400">{formatMetadataLabel(key)}</dt>
-              <dd className="font-mono text-gray-700">{formatMetadataValue(value)}</dd>
-            </div>
-          ))}
-        </dl>
+      <p className="mt-4 text-base text-slate-900">{toSentence(node.reason)}</p>
+      <p className="mt-2 text-sm text-slate-600">{info.description}</p>
+
+      {node.status === "SKIPPED" ? (
+        <p className="mt-5 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+          The engine stops at the first failed check, so this check didn't evaluate any values.
+        </p>
+      ) : (
+        <table className="mt-5 w-full text-sm">
+          <caption className="mb-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
+            Evaluated values
+          </caption>
+          <thead className="sr-only">
+            <tr>
+              <th scope="col">Signal</th>
+              <th scope="col">Value</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-200 border-y border-slate-200">
+            {rows.map((row) => (
+              <tr key={row.key}>
+                <th scope="row" className="py-2 pr-3 text-left align-top font-normal text-slate-600">
+                  {humanizeKey(row.key)}
+                </th>
+                <td className="py-2 text-right align-top">
+                  <span className={`font-mono ${row.breached ? "font-semibold text-red-700" : "text-slate-900"}`}>
+                    {formatMetadataValue(row.key, row.value)}
+                  </span>
+                  {row.limit && (
+                    <span className="block text-xs text-slate-600">
+                      {row.breached ? (row.limit.kind === "max" ? "Over limit of " : "Under minimum of ") : `${row.limit.kind === "max" ? "Limit" : "Minimum"} `}
+                      {formatMetadataValue(row.key, row.limit.value)}
+                    </span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
     </div>
   );

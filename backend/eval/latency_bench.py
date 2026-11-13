@@ -22,17 +22,18 @@ import time
 from synthetic_eval import generate_transaction
 
 from app.engine.runner import run_decision
+from app.models.rules import RuleConfig
 
 txn = generate_transaction(random.Random(42), 0)
 
 # warmup
 for _ in range(100):
-    run_decision(txn)
+    run_decision(txn, RuleConfig())
 
 times = []
 for _ in range(5000):
     start = time.perf_counter()
-    run_decision(txn)
+    run_decision(txn, RuleConfig())
     times.append((time.perf_counter() - start) * 1000)
 
 times.sort()

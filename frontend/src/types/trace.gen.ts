@@ -30,15 +30,65 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/decisions/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Decisions Batch */
+        post: operations["create_decisions_batch_api_v1_decisions_batch_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/rules/defaults": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Default Rules */
+        get: operations["get_default_rules_api_v1_rules_defaults_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** BatchDecisionRequest */
+        BatchDecisionRequest: {
+            /** Transactions */
+            transactions: components["schemas"]["TransactionInput"][];
+            rules: components["schemas"]["RuleConfig"];
+        };
+        /** BatchDecisionResponse */
+        BatchDecisionResponse: {
+            /** Results */
+            results: components["schemas"]["DecisionTrace"][];
+        };
         /**
          * Decision
          * @enum {string}
          */
         Decision: "APPROVE" | "DECLINE";
+        /** DecisionRequest */
+        DecisionRequest: {
+            transaction: components["schemas"]["TransactionInput"];
+            rules: components["schemas"]["RuleConfig"];
+        };
         /** DecisionTrace */
         DecisionTrace: {
             /** Transaction Id */
@@ -69,6 +119,44 @@ export interface components {
          * @enum {string}
          */
         NodeStatus: "PASSED" | "FAILED" | "SKIPPED";
+        /** RuleConfig */
+        RuleConfig: {
+            /**
+             * Max Future Skew Minutes
+             * @default 5
+             */
+            max_future_skew_minutes: number;
+            /**
+             * Max Staleness Minutes
+             * @default 15
+             */
+            max_staleness_minutes: number;
+            /**
+             * Max Amount
+             * @default 5000
+             */
+            max_amount: number;
+            /**
+             * Max Transactions Per Hour
+             * @default 5
+             */
+            max_transactions_per_hour: number;
+            /**
+             * Max Transactions Per Day
+             * @default 20
+             */
+            max_transactions_per_day: number;
+            /**
+             * Max Accounts Per Device Per Day
+             * @default 3
+             */
+            max_accounts_per_device_per_day: number;
+            /**
+             * Min Trusted Account Age Days
+             * @default 30
+             */
+            min_trusted_account_age_days: number;
+        };
         /** TransactionInput */
         TransactionInput: {
             /** Transaction Id */
@@ -144,7 +232,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["TransactionInput"];
+                "application/json": components["schemas"]["DecisionRequest"];
             };
         };
         responses: {
@@ -168,6 +256,59 @@ export interface operations {
             };
         };
     };
+    create_decisions_batch_api_v1_decisions_batch_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BatchDecisionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BatchDecisionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_default_rules_api_v1_rules_defaults_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuleConfig"];
+                };
+            };
+        };
+    };
 }
 
 // Flat aliases so the rest of the frontend can import
@@ -178,3 +319,7 @@ export type DecisionTrace = components["schemas"]["DecisionTrace"];
 export type NodeResult = components["schemas"]["NodeResult"];
 export type NodeStatus = components["schemas"]["NodeStatus"];
 export type Decision = components["schemas"]["Decision"];
+export type RuleConfig = components["schemas"]["RuleConfig"];
+export type DecisionRequest = components["schemas"]["DecisionRequest"];
+export type BatchDecisionRequest = components["schemas"]["BatchDecisionRequest"];
+export type BatchDecisionResponse = components["schemas"]["BatchDecisionResponse"];
